@@ -26,6 +26,7 @@ let textTextures = [];
 let isPinching = false;
 let initialPinchDistance = 0;
 let initialZoom = 1.0;
+let hasPinched = false; // Track if user has pinched in this session
 
 const rgbaToArray = (rgba) => {
   const match = rgba.match(/rgba?\(([^)]+)\)/);
@@ -198,19 +199,22 @@ const onTouchMove = (e) => {
     if (!isPinching) {
       // Just started pinching
       isPinching = true;
+      hasPinched = true; // Mark that we've pinched
       isDragging = false;
       initialPinchDistance = getDistance(e.touches[0], e.touches[1]);
       initialZoom = zoomLevel;
     } else {
       // Continue pinching
       const currentDistance = getDistance(e.touches[0], e.touches[1]);
-      const scale = currentDistance / initialPinchDistance;
+      // Reverse the scale: pinch out (larger distance) = zoom out (smaller grid)
+      // pinch in (smaller distance) = zoom in (larger grid)
+      const scale = initialPinchDistance / currentDistance;
       targetZoom = Math.max(0.5, Math.min(3.0, initialZoom * scale));
     }
   } else if (e.touches.length === 1) {
     // Single touch - normal drag
     if (isPinching) {
-      // Transitioning from pinch to drag
+      // Transitioning from pinch to drag - keep zoom level
       isPinching = false;
       startDrag(e.touches[0].clientX, e.touches[0].clientY);
     } else if (isDragging) {
@@ -225,12 +229,14 @@ const onPointerUp = (event) => {
   isPinching = false;
   document.body.classList.remove("dragging");
   
-  // Only reset zoom if we weren't pinching (pinch zoom should persist)
-  // Also check if there are still touches (might be transitioning from 2 to 1 touch)
+  // Don't reset zoom if we were pinching - let it persist
+  // Only reset zoom on regular drag end (not after pinch)
   const touchCount = event.touches?.length || 0;
-  if (!wasPinching && touchCount === 0) {
+  if (!hasPinched && !wasPinching && touchCount === 0) {
+    // Only reset if we never pinched, weren't pinching, and all touches are released
     targetZoom = 1.0;
   }
+  // If hasPinched is true, targetZoom stays at its current value (persists)
 
   if (isClick && Date.now() - clickStartTime < 200) {
     const endX = event.clientX || event.changedTouches?.[0]?.clientX;
