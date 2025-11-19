@@ -27,6 +27,7 @@ let isPinching = false;
 let initialPinchDistance = 0;
 let initialZoom = 1.0;
 let hasPinched = false; // Track if user has pinched in this session
+let dragZoomTimeout = null;
 
 const rgbaToArray = (rgba) => {
   const match = rgba.match(/rgba?\(([^)]+)\)/);
@@ -140,14 +141,25 @@ const updateMousePosition = (event) => {
   );
 };
 
-const startDrag = (x, y) => {
+const startDrag = (x, y, { autoZoom = true } = {}) => {
   isDragging = true;
   isClick = true;
   clickStartTime = Date.now();
   document.body.classList.add("dragging");
   previousMouse.x = x;
   previousMouse.y = y;
-  setTimeout(() => isDragging && (targetZoom = config.zoomLevel), 150);
+  if (dragZoomTimeout) {
+    clearTimeout(dragZoomTimeout);
+    dragZoomTimeout = null;
+  }
+
+  if (autoZoom && !hasPinched) {
+    dragZoomTimeout = setTimeout(() => {
+      if (isDragging) {
+        targetZoom = config.zoomLevel;
+      }
+    }, 150);
+  }
 };
 
 const getDistance = (touch1, touch2) => {
@@ -216,7 +228,9 @@ const onTouchMove = (e) => {
     if (isPinching) {
       // Transitioning from pinch to drag - keep zoom level
       isPinching = false;
-      startDrag(e.touches[0].clientX, e.touches[0].clientY);
+      startDrag(e.touches[0].clientX, e.touches[0].clientY, {
+        autoZoom: false,
+      });
     } else if (isDragging) {
       handleMove(e.touches[0].clientX, e.touches[0].clientY);
     }
@@ -228,6 +242,10 @@ const onPointerUp = (event) => {
   isDragging = false;
   isPinching = false;
   document.body.classList.remove("dragging");
+  if (dragZoomTimeout) {
+    clearTimeout(dragZoomTimeout);
+    dragZoomTimeout = null;
+  }
   
   // Don't reset zoom if we were pinching - let it persist
   // Only reset zoom on regular drag end (not after pinch)
@@ -372,6 +390,7 @@ const init = async () => {
 
   setupEventListeners();
   animate();
+  container.classList.add("gallery-ready");
 };
 
 init();

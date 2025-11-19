@@ -26,12 +26,18 @@ body.dragging {
   width: 100vw;
   height: 100svh;
   opacity: 0;
-  animation: smoothFadeIn 2s ease-out forwards;
 }
 
 #gallery canvas {
   opacity: 0;
-  animation: smoothFadeIn 2s ease-out 0.2s forwards;
+}
+
+#gallery.gallery-ready {
+  animation: smoothFadeIn 0.6s ease-out forwards;
+}
+
+#gallery.gallery-ready canvas {
+  animation: smoothFadeIn 0.6s ease-out 0.1s forwards;
 }
 
 @keyframes smoothFadeIn {
